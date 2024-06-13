@@ -1,0 +1,211 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model pedidoBling {
+  id                String         @id @default(cuid())
+  desconto          String?
+  observacoes       String?
+  observacaointerna String?
+  data              DateTime?
+  numero            String?
+  numeroOrdemCompra String?
+  vendedor          String?
+  valorfrete        Decimal?       @db.Decimal(11, 2)
+  outrasdespesas    Decimal?       @db.Decimal(11, 2)
+  totalprodutos     Decimal?       @db.Decimal(11, 2)
+  totalvenda        Decimal?       @db.Decimal(11, 2)
+  situacao          String?
+  dataSaida         DateTime?
+  clientId          String?
+  dashboardId       String
+  loja              String?
+  numeroPedidoLoja  String?
+  tipoIntegracao    String?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @default(now()) @updatedAt
+  isActive          Boolean        @default(true)
+  client            clienteBling?  @relation(fields: [clientId], references: [id])
+  dashboard         Dashboard      @relation(fields: [dashboardId], references: [id])
+  items             produtoBling[]
+
+  @@map("pedido_bling")
+}
+
+model lojasBling {
+  id              String    @id @default(cuid())
+  dashboardId     String
+  loja            String
+  nome            String
+  taxaMarketplace Decimal?  @db.Decimal(11, 2)
+  taxaTributos    Decimal?  @db.Decimal(11, 2)
+  createdAt       DateTime  @default(now())
+  dashboard       Dashboard @relation(fields: [dashboardId], references: [id])
+
+  @@unique([dashboardId, loja])
+  @@map("lojas_bling")
+}
+
+model produtoBling {
+  id                 String      @id @default(cuid())
+  codigo             String
+  descricao          String?
+  quantidade         Decimal?    @db.Decimal(11, 2)
+  valorunidade       Decimal?    @db.Decimal(11, 2)
+  precocusto         Decimal?    @db.Decimal(11, 2)
+  descontoItem       Decimal?    @db.Decimal(11, 2)
+  un                 String?
+  presoBruto         Decimal?    @db.Decimal(11, 2)
+  descricaoDetalhada String?
+  gtin               String?
+  dashboardId        String
+  pedidoId           String
+  coberturaEstoque   Decimal?    @db.Decimal(11, 2)
+  estoque            Decimal?    @db.Decimal(11, 2)
+  dashboard          Dashboard   @relation(fields: [dashboardId], references: [id])
+  pedidoBling        pedidoBling @relation(fields: [pedidoId], references: [id])
+  Estoque            Estoque[]
+
+  @@map("produto_bling")
+}
+
+model clienteBling {
+  id          String        @id @default(cuid())
+  bling_id    String
+  nome        String?
+  cnpj        String?
+  ie          String?
+  rg          String?
+  endereco    String?
+  numero      String?
+  complemento String?
+  cidade      String?
+  bairro      String?
+  cep         String?
+  uf          String?
+  email       String?
+  celular     String?
+  fone        String?
+  dashboardId String
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @default(now()) @updatedAt
+  isActive    Boolean       @default(true)
+  dashboard   Dashboard     @relation(fields: [dashboardId], references: [id])
+  pedidos     pedidoBling[]
+
+  @@map("cliente_bling")
+}
+
+model Account {
+  id                String     @id @default(cuid())
+  type              String
+  provider          String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  providerAccountId String
+  userId            String
+  last_bling_update DateTime?
+  user              User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dashboard         Dashboard?
+
+  @@unique([provider, providerAccountId])
+}
+
+model User {
+  id                 String         @id @default(cuid())
+  name               String?
+  email              String?        @unique
+  emailVerified      DateTime?
+  password           String?
+  image              String?
+  stripeId           String?
+  createdAt          DateTime       @default(now())
+  phone              String?
+  whatsappConsent    Boolean?
+  companyType        String?
+  onboardingFinished Boolean        @default(false)
+  accounts           Account[]
+  dashboards         Dashboard[]
+  sessions           Session[]
+  subscriptions      Subscription[]
+}
+
+model Subscription {
+  id               String    @id @default(cuid())
+  stripeId         String    @unique
+  stripeUserId     String
+  subscriptionPlan Plans
+  status           String
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @default(now()) @updatedAt
+  finishedAt       DateTime?
+  userId           String
+  user             User      @relation(fields: [userId], references: [id])
+}
+
+model Dashboard {
+  id                 String         @id @default(cuid())
+  name               String
+  userId             String
+  accountId          String?        @unique
+  createdAt          DateTime       @default(now())
+  isReady            Boolean        @default(false)
+  isActive           Boolean        @default(true)
+  instagramAccountId String?
+  integration        Account?       @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  user               User           @relation(fields: [userId], references: [id])
+  clientesBling      clienteBling[]
+  lojasBling         lojasBling[]
+  pedidosBling       pedidoBling[]
+  produtoBling       produtoBling[]
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  expires      DateTime
+  sessionToken String   @unique
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+enum Plans {
+  INSTAGRAM
+  BLING_BASIC
+  BLING_PLUS
+}
+
+enum Role {
+  FREE
+  PREMIUM
+}
+
+model Estoque {
+  id          String   @id @default(cuid())
+  produtoId   String
+  quantidade  Int
+  localizacao String?
+  observacoes String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+
+  // Relacionamento com o modelo Produto
+  produtoBling produtoBling @relation(fields: [produtoId], references: [id])
+}
